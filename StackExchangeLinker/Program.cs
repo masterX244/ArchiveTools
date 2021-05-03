@@ -11,45 +11,66 @@ namespace StackExchangeLinker
         {
             foreach(string arg in args)
             {
-                XmlReader r = XmlReader.Create(arg);
-                using TextWriter tw = new StreamWriter(arg + ".txt"); //C# 8, selfdestructs at scope end
-                r.MoveToContent();
-                while (r.Read())
+                Console.WriteLine("Starting " + arg);
+                if (!File.Exists(arg + ".txt"))
                 {
-                    Console.WriteLine("READ");
-                    var body = r.GetAttribute("Body");
-                    if (body != null)
+                    XmlReader r = XmlReader.Create(arg);
+                    Console.WriteLine("Really Starting " + arg);
+                    using TextWriter tw = new StreamWriter(arg + ".txt"); //C# 8, selfdestructs at scope end
+                    using TextWriter tw2 = new StreamWriter(arg + ".relative.txt"); //C# 8, selfdestructs at scope end
+                    r.MoveToContent();
+                    while (r.Read())
                     {
-                        var parseMsgBody = String.Format(@"<html><body>{0}</body></html>", body);
-                        var doc = new HtmlDocument();
-                        doc.LoadHtml(parseMsgBody);
-                        var nodes = doc.DocumentNode.SelectNodes("//a");
-
-                        if (nodes != null)
+                        var body = r.GetAttribute("Body");
+                        if (body != null)
                         {
-                            foreach (var node in nodes)
+                            var parseMsgBody = String.Format(@"<html><body>{0}</body></html>", body);
+                            var doc = new HtmlDocument();
+                            doc.LoadHtml(parseMsgBody);
+                            var nodes = doc.DocumentNode.SelectNodes("//a");
+
+                            if (nodes != null)
                             {
-                                var link = node.Attributes["href"].Value + "\n";
-                                if (!link.StartsWith("/"))
+                                foreach (var node in nodes)
                                 {
-                                    tw.Write(link);
+                                    var attr = node.Attributes["href"];
+                                    if(attr==null)
+                                    {
+                                        Console.WriteLine("DAFUQ?");
+                                        Console.WriteLine(parseMsgBody);
+                                        continue;
+                                    }
+                                    var link = attr.Value ?? "" + "\n";
+                                    if (!link.StartsWith("/"))
+                                    {
+                                        tw.Write(link);
+                                    }
                                 }
                             }
-                        }
-                        nodes = doc.DocumentNode.SelectNodes("//img");
+                            nodes = doc.DocumentNode.SelectNodes("//img");
 
-                        if (nodes != null)
-                        {
-                            foreach (var node in nodes)
+                            if (nodes != null)
                             {
-                                var link = node.Attributes["src"].Value + "\n";
-                                if (!link.StartsWith("/"))
+                                foreach (var node in nodes)
                                 {
-                                    tw.Write(link);
-                                }
-                                else
-                                {
-                                    throw new Exception("BLAH!, this shouldnt have happened at all. Not sure what fudgery is the reason");
+                                    var attr = node.Attributes["src"];
+                                    if (attr == null)
+                                    {
+                                        Console.WriteLine("DAFUQ?");
+                                        Console.WriteLine(parseMsgBody);
+                                        continue;
+                                    }
+                                    var link = attr.Value + "\n";
+
+                                    if (!link.StartsWith("/"))
+                                    {
+                                        tw.Write(link);
+                                    }
+                                    else
+                                    {
+                                        //throw new Exception("BLAH!, this shouldnt have happened at all. Not sure what fudgery is the reason");
+                                        tw2.Write(link);
+                                    }
                                 }
                             }
                         }
